@@ -37,8 +37,11 @@ class SpatialRegion:
     def corners(self):
         """ List corners of this region, in clockwise order from lower-left """
         dx, dy = comps(self.span)
-        return [self.ll, self.ll + dy, self.ll + self.span, self.ll + dx]
-
+        yield self.ll
+        yield self.ll + dy
+        yield self.ll + self.span
+        yield self.ll + dx
+        
     def center(self):
         return self.ll + 0.5 * self.span
 
