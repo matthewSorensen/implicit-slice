@@ -27,7 +27,7 @@ class SpatialRegion:
     def index(self,point):
         half_span = self.span * 0.5
         displace = point - half_span - self.ll
-        dx, dy = half_span * np.absolute(displace)        
+        dx, dy = [half_span[1],half_span[0]] * np.absolute(displace)        
 
         if dy < dx:
             return 0 if displace[0] < 0 else 2
@@ -35,7 +35,7 @@ class SpatialRegion:
             return 3 if displace[1] < 0 else 1
 
     def corners(self):
-        """ List corners of this region, in clockwise order from lower-left """
+        """ Enumerate corners of this region, in clockwise order from lower-left """
         dx, dy = comps(self.span)
         yield self.ll
         yield self.ll + dy
@@ -80,6 +80,8 @@ class SpatialRegion:
                 yield SpatialRegion(self.ll + ihat * dx + jhat * dy ,ones)
 
     def quadtree_recursion_scheme(self,pred,transfer,merge):
+        # This is just a hylomorphism! Yay abstracting out recursion patterns!
+
         if self.quarterable() and pred(self):
             v = self.quarter()
             q1 = v.next().quadtree_recursion_scheme(pred,transfer,merge)

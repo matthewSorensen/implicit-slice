@@ -52,3 +52,4 @@ for p in r.quadtree_recursion_scheme(lambda x: pred(sdf,x),lambda x: transfer(sd
     plt.gca().add_patch(plt.Rectangle(flip(p.ll),x,y,color='r'))
 
 plt.show()
+
