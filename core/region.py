@@ -7,7 +7,7 @@ ones = np.array([1,1])
 zeros = np.array([0,0])
 
 def invert(index):
-    """ Given r.index(p.center), compute p.index(r.center) """
+    """ Given r.index(p.center()), compute p.index(r.center()) """
     return [2,3,0,1][index]
 
 def comps(vect):
@@ -38,6 +38,9 @@ class SpatialRegion:
         """ List corners of this region, in clockwise order from lower-left """
         dx, dy = comps(self.span)
         return [self.ll, self.ll + dy, self.ll + self.span, self.ll + dx]
+
+    def center(self):
+        return self.ll + 0.5 * self.span
 
     def merge(self,other):
         """ Destructively merge a region into this region """
@@ -72,5 +75,22 @@ class SpatialRegion:
         for dx in range(x):
             for dy in range(y):
                 yield SpatialRegion(self.ll + ihat * dx + jhat * dy ,ones)
+
+    def quadtree_recursion_scheme(self,pred,transfer,merge):
+        if self.quarterable() and pred(self):
+            v = self.quarter()
+            q1 = v.next().quadtree_recursion_scheme(pred,transfer,merge)
+            q2 = v.next().quadtree_recursion_scheme(pred,transfer,merge)
+            q3 = v.next().quadtree_recursion_scheme(pred,transfer,merge)
+            q4 = v.next().quadtree_recursion_scheme(pred,transfer,merge)
+            return merge(merge(q1,q2),merge(q3,q4))
+
+        ret = None
+        for x in self.pixels():
+            if ret is None:
+                ret = transfer(x)
+            else:
+                ret = merge(ret,transfer(x))
+        return ret
 
 unit_box = SpatialRegion(zeros,ones)
