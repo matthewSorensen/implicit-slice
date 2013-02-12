@@ -1,10 +1,6 @@
 import numpy as np
+from util import ihat, jhat, ones, zeros
 import math
-
-ihat = np.array([1,0])
-jhat = np.array([0,1])
-ones = np.array([1,1])
-zeros = np.array([0,0])
 
 def invert(index):
     """ Given r.index(p.center()), compute p.index(r.center()) """
@@ -25,14 +21,13 @@ class SpatialRegion:
         self.span = span
 
     def index(self,point):
-        half_span = self.span * 0.5
-        displace = point - half_span - self.ll
-        dx, dy = [half_span[1],half_span[0]] * np.absolute(displace)        
+        sx, sy = half_span = self.span * 0.5
+        dx, dy = point - half_span - self.ll
 
-        if dy < dx:
-            return 0 if displace[0] < 0 else 2
+        if sx * abs(dy) < sy * abs(dx):
+            return 0 if dx < 0 else 2
         else:
-            return 3 if displace[1] < 0 else 1
+            return 3 if dy < 0 else 1
 
     def corners(self):
         """ Enumerate corners of this region, in clockwise order from lower-left """

@@ -4,7 +4,6 @@ import util
 class TopologicalImpossibility(Exception):
     pass
 
-
 def sign_changes(points):
     changes = []
     prev = util.sgn(points[0])
