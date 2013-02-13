@@ -28,24 +28,24 @@ class OccupiedRegion:
         self.epsilon = 0.001
 
     def merge_empty(self,other):
-        """ Merges this occupied region with an empty region """
+        """ Merges this occupied region with an empty region, resolving potentially ambiguous corners """
+
         side = self.region.index(other.center())
         self.region.merge(other)
+        prev_side = backward(side)
+        next_side = forward(side)
 
-        if not self.open[side]:
-            return
         if self.ambi[side]:
-            problem = self.open[side][0]
-            del self.open[side][0]
-            self.open[util.backward(side)].append(problem)
-        forward = util.forward(side)
+            self.open[prev_side].append(self.open[side].pop(0))
+            self.ambi[side] = False
+
         if self.ambi[forward]:
-            problem = self.open[side][-1]
-            del self.open[side][-1]
-            self.open[forward].insert(0,problem)
-        if self.open[side]:
+            self.open[next_side].insert(0, self.open[side].pop())
+            self.ambi[next_side] = False
+
+        if self.open[side]:        
             raise TopologicalImpossibility()
-        
+
     def merge(self,other):
         """ Merges this occupied region with a second occupied region """
 
