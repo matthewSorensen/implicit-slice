@@ -41,10 +41,10 @@ class OccupiedRegion:
         # Then linearly interpolate to find the endpoints for this segment
         x,y = comps(region.span)
         
-        trans = [0.5 * y, y + 0.5 * x, x + 0.5 * y, 0.5 * x]
-
-        start = region.ll + trans[starts]
-        end = region.ll + trans[ends]
+        corners = [c for c in self.region.corners()]
+        
+        start = corners[starts] + abs(dcorners[starts]) * (corners[starte] - corners[starts])
+        end   = corners[ends] + abs(dcorners[ends]) * (corners[ende] - corners[ends])
 
         self.segs = [[start,end]]
         self.open = [[],[],[],[]]
@@ -53,15 +53,32 @@ class OccupiedRegion:
 
         # this needs to be parameterized
         self.epsilon = 0.001
- 
+
+        self.ambi = [0 == d for d in dcorners]
+
     def merge_empty(self,other):
         """ Merges this occupied region with an empty region """
-        if len(self.open[self.region.index(other.center())]) > 0:
-            print self.segs, self.open
-            print self.region.ll, self.region.span
-            print other.ll, other.span
-            raise TopologicalImpossibility()
+        side = self.region.index(other.center())
         self.region.merge(other)
+
+        if not self.open[side]:
+            return
+   
+        if self.ambi[side]:
+            problem = self.open[side][0]
+            del self.open[side][0]
+            self.open[util.backward(side)].append(problem)
+                
+        forward = util.forward(side)
+
+        if self.ambi[forward]:
+            problem = self.open[side][-1]
+            del self.open[side][-1]
+            self.open[forward].insert(0,problem)
+
+        if self.open[side]:
+            raise TopologicalImpossibility()
+        
 
     def merge(self,other):
         """ Merges this occupied region with a second occupied region """
@@ -95,13 +112,16 @@ class OccupiedRegion:
                 to_join[i+1] = (indext, None)
 
         self.region.merge(other.region)
-        self.closed.extend(other.closed)
+
         self.segs = [seg for seg in self.segs + other.segs if not seg is None]
         # This isn't the best way to rebuild open, but it works
         self.open = [[],[],[],[]]
-        for i, curve in enumerate(self.segs):
+        for i, curve in enumerate(self.segs): # This ordering is entirely wrong and such
             self.open[self.region.index(curve[ 0])].append((i,True))
             self.open[self.region.index(curve[-1])].append((i,False))
+
+        self.closed.extend(other.closed)
+
 
 def merge(ra,rb):
     if isinstance(ra,OccupiedRegion):
