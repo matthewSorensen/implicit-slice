@@ -1,15 +1,10 @@
 import numpy as np
-from util import ihat, jhat, ones, zeros
+from util import ihat, jhat, ones, zeros, comps
 import math
 
 def invert(index):
     """ Given r.index(p.center()), compute p.index(r.center()) """
     return [2,3,0,1][index]
-
-def comps(vect):
-    """ Project a vector onto i and j """
-    x,y = vect
-    return ihat * x, jhat * y
 
 class InvalidRegionMerge(Exception):
     pass

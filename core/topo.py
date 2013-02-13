@@ -1,29 +1,9 @@
 from region import *
+from polyline import *
 import util
 
 class TopologicalImpossibility(Exception):
     pass
-
-def sign_changes(points):
-    changes = []
-    prev = util.sgn(points[0])
-    l = len(points)
-    for i, point in enumerate(points + [points[0]]):
-        if not util.sgn(point) == prev:
-            changes = changes + [((i -1) % l, i % l)]
-        prev = util.sgn(point)
-    return changes
-
-def join_segments(eps,this_points, this_dir, other_points, other_dir):
-    # we must be at the start of the other list
-    if not other_dir:
-        other_points.reverse()
-    # and the end of this list
-    if this_dir:
-        this_points.reverse()
-    if eps >= np.linalg.norm(this_points[-1] - other_points[0]):
-        other_points = other_points[1:]
-    this_points.extend(other_points)
 
 def replace_references(op, old, new):
     for i in range(len(op)):
@@ -32,29 +12,20 @@ def replace_references(op, old, new):
             op[i] = (new, direction)
 
 class OccupiedRegion:
-    def __init__(self,region,dcorners):
+    def __init__(self,region,sdf):
         self.region = region
         self.closed = []
-        self.open = [[],[],[],[]]
         
-        (starts, starte), (ends, ende) = sign_changes(dcorners)[:2]
-        # Then linearly interpolate to find the endpoints for this segment
-        x,y = comps(region.span)
-        
-        corners = [c for c in self.region.corners()]
-        
-        start = corners[starts] + abs(dcorners[starts]) * (corners[starte] - corners[starts])
-        end   = corners[ends] + abs(dcorners[ends]) * (corners[ende] - corners[ends])
+        line = from_sdf_corners(list(region.corners()),sdf)        
 
-        self.segs = [[start,end]]
+        self.segs = [line]
         self.open = [[],[],[],[]]
-        self.open[self.region.index(start)] = [(0,True)]
-        self.open[self.region.index(end)] = [(0,False)]
+        self.open[self.region.index(line.head())] = [(0,True)]
+        self.open[self.region.index(line.tail())] = [(0,False)]
 
+        self.ambi = [0 == d for d in sdf]
         # this needs to be parameterized
         self.epsilon = 0.001
-
-        self.ambi = [0 == d for d in dcorners]
 
     def merge_empty(self,other):
         """ Merges this occupied region with an empty region """
@@ -63,30 +34,27 @@ class OccupiedRegion:
 
         if not self.open[side]:
             return
-   
         if self.ambi[side]:
             problem = self.open[side][0]
             del self.open[side][0]
             self.open[util.backward(side)].append(problem)
-                
         forward = util.forward(side)
-
         if self.ambi[forward]:
             problem = self.open[side][-1]
             del self.open[side][-1]
             self.open[forward].insert(0,problem)
-
         if self.open[side]:
             raise TopologicalImpossibility()
         
-
     def merge(self,other):
         """ Merges this occupied region with a second occupied region """
 
         side = self.region.index(other.region.center())
         to_join = other.open[invert(side)]
         to_join.reverse()
+
         if not len(to_join) == len(self.open[side]):
+            # this is where I would implement
             raise TopologicalImpossibility()
 
         # Now we walk along self.open[side] and to_join in lockstep
@@ -96,15 +64,15 @@ class OccupiedRegion:
             indexo, diro = to_join[i]
             # Fuse the two segments. if dirto is None, we may have a closure
             if not diro is None:
-                join_segments(self.epsilon,self.segs[indext],dirt,other.segs[indexo],diro)
+                self.segs[indext].join(dirt, other.segs[indexo], diro, self.epsilon)
                 other.segs[indexo] = None
             elif not indext == indexo:
                 # we're joining segments in the same object, but not closing a curve
-                join_segments(self.epsilon,self.segs[indexo],False,self.segs[indext],dirt)
+                self.segs[indexo].join(False, other.segs[indext], diro, self.epsilon)
                 # all references to indexo now must be references to indext
                 replace_references(self.open[side],indexo, indext)
             else:
-                self.closed.append(self.segs[indext])
+                self.closed.append(self.segs[indext].close())
                 self.segs[indext] = None
             # If the next index in to_join refers to the same curve,           
             if i+1 < len(to_join) and not diro is None and indexo == to_join[i+1][0]:
@@ -115,13 +83,13 @@ class OccupiedRegion:
 
         self.segs = [seg for seg in self.segs + other.segs if not seg is None]
         # This isn't the best way to rebuild open, but it works
+
         self.open = [[],[],[],[]]
         for i, curve in enumerate(self.segs): # This ordering is entirely wrong and such
-            self.open[self.region.index(curve[ 0])].append((i,True))
-            self.open[self.region.index(curve[-1])].append((i,False))
+            self.open[self.region.index(curve.head())].append((i,True))
+            self.open[self.region.index(curve.tail())].append((i,False))
 
         self.closed.extend(other.closed)
-
 
 def merge(ra,rb):
     if isinstance(ra,OccupiedRegion):
