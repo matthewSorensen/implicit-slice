@@ -32,29 +32,37 @@ class OccupiedRegion:
 
         side = self.region.index(other.center())
         self.region.merge(other)
-        prev_side = backward(side)
-        next_side = forward(side)
-
-        if self.ambi[side]:
-            self.open[prev_side].append(self.open[side].pop(0))
-            self.ambi[side] = False
-
-        if self.ambi[forward]:
-            self.open[next_side].insert(0, self.open[side].pop())
-            self.ambi[next_side] = False
+        prev_side = util.backward(side)
+        next_side = util.forward(side)
 
         if self.open[side]:        
-            raise TopologicalImpossibility()
+            if self.ambi[side]:
+                self.open[prev_side].append(self.open[side].pop(0))
+                self.ambi[side] = False
+
+            if self.ambi[next_side]:
+                self.open[next_side].insert(0, self.open[side].pop())
+                self.ambi[next_side] = False
+
+            if self.open[side]:        
+                raise TopologicalImpossibility()
 
     def merge(self,other):
         """ Merges this occupied region with a second occupied region """
 
-        side = self.region.index(other.region.center())
-        to_join = other.open[invert(side)]
+        side  = self.region.index(other.region.center())
+        iside = invert(side)
+
+        to_join = other.open[iside]
         to_join.reverse()
 
         if not len(to_join) == len(self.open[side]):
-            # this is where I would implement
+            print [s.points for s in self.segs]
+            print [s.points for s in other.segs]
+            print self.open
+            print other.open
+
+            # this is where I would implement the stealing
             raise TopologicalImpossibility()
 
         # Now we walk along self.open[side] and to_join in lockstep

@@ -32,8 +32,8 @@ class Polyline:
             unchanged = False
         if not other_direction:
             other.reverse()
-        if eps < np.norm(self.tail() - other.head()):
-            self.points.extend(other.point)
+        if eps < np.linalg.norm(self.tail() - other.head()):
+            self.points.extend(other.points)
         else:
             self.points.extend(other.points[1:])
 
@@ -53,6 +53,6 @@ def from_sdf_corners(corners,sdf):
     (starts, starte), (ends, ende) = sign_changes(sdf)[:2]
     # Then linearly interpolate to find the endpoints for this segment   
     start = util.lerp(corners[starts], corners[starte], abs(sdf[starts]))
-    end = util.lerp(corners[starts], corners[starte], abs(sdf[starts]))
+    end = util.lerp(corners[ends], corners[ende], abs(sdf[ends]))
 
     return Polyline(start,end)
