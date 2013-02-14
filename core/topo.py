@@ -1,6 +1,7 @@
 from region import *
 from polyline import *
 import util
+import numpy as np
 
 class TopologicalImpossibility(Exception):
     pass
@@ -16,26 +17,29 @@ class OccupiedRegion:
         self.region = region
         self.closed = []
         
-        line = from_sdf_corners(list(region.corners()),sdf)        
-
+        line = from_sdf_corners(region,sdf)        
+        
         self.segs = [line]
         self.open = [[],[],[],[]]
         self.open[self.region.index(line.head())] = [(0,True)]
         self.open[self.region.index(line.tail())] = [(0,False)]
-
+        
         self.ambi = [0 == d for d in sdf]
         # this needs to be parameterized
         self.epsilon = 0.001
+    
 
     def merge_empty(self,other):
         """ Merges this occupied region with an empty region, resolving potentially ambiguous corners """
 
         side = self.region.index(other.center())
+
         self.region.merge(other)
         prev_side = util.backward(side)
         next_side = util.forward(side)
 
         if self.open[side]:        
+
             if self.ambi[side]:
                 self.open[prev_side].append(self.open[side].pop(0))
                 self.ambi[side] = False
@@ -59,10 +63,8 @@ class OccupiedRegion:
         if not len(to_join) == len(self.open[side]):
             print [s.points for s in self.segs]
             print [s.points for s in other.segs]
-            print self.open
-            print other.open
-
-            # this is where I would implement the stealing
+            print self.open, other.open
+            print side, iside
             raise TopologicalImpossibility()
 
         # Now we walk along self.open[side] and to_join in lockstep
@@ -96,6 +98,22 @@ class OccupiedRegion:
         for i, curve in enumerate(self.segs): # This ordering is entirely wrong and such
             self.open[self.region.index(curve.head())].append((i,True))
             self.open[self.region.index(curve.tail())].append((i,False))
+
+        # now that we have everything in the right bins, time for an ugly hack in exchange for real
+        # thinking
+
+        def seg_at(p):
+            i, d = p
+            if d:
+                return self.segs[i].head()
+            else:
+                return self.segs[i].tail()
+
+        c = self.region.corners()
+        v = [util.jhat, util.ihat, -1 * util.jhat, -1 * util.ihat]
+        for i in range(4):
+            cn = c.next()
+            self.open[i].sort(key = lambda x: np.dot(v[i],seg_at(x)))
 
         self.closed.extend(other.closed)
 
