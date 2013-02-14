@@ -92,7 +92,6 @@ def from_sdf_corners(region,sdf):
 
     theta = math.atan2(grad[1], grad[0])
 
-    c = [util.zeros, util.jhat, util.ones, util.ihat]
     half = [0.5 * util.jhat, util.jhat + 0.5 * util.ihat, util.ihat + 0.5 * util.jhat, 0.5 * util.ihat]
 
     if starte == ends or starts == ende:

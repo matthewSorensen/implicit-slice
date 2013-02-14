@@ -26,3 +26,5 @@ def comps(vect):
     """ Project a vector onto i and j """
     x,y = vect
     return ihat * x, jhat * y
+
+infinity = float("inf")

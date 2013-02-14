@@ -14,6 +14,9 @@ def replace_references(op, old, new):
 
 class OccupiedRegion:
     def __init__(self,region,sdf):
+        # this needs to be parameterized
+        self.epsilon = 0.001
+
         self.region = region
         self.closed = []
         
@@ -21,13 +24,21 @@ class OccupiedRegion:
         
         self.segs = [line]
         self.open = [[],[],[],[]]
-        self.open[self.region.index(line.head())] = [(0,True)]
-        self.open[self.region.index(line.tail())] = [(0,False)]
+
+        hindex = self.region.index(line.head())
+        tindex = self.region.index(line.tail())
+
+        self.open[hindex] = [(0,True)]
+        self.open[tindex] = [(0,False)]
         
-        self.ambi = [0 == d for d in sdf]
-        # this needs to be parameterized
-        self.epsilon = 0.001
-    
+        self.ambi = [False,False,False,False]
+        # This is massively stupid but works
+        for i, c in enumerate(region.corners()):
+            if np.linalg.norm(line.head() - c) < self.epsilon:
+                self.ambi[i] = True
+                continue
+            if np.linalg.norm(line.tail() - c) < self.epsilon:
+                self.ambi[i] = True
 
     def merge_empty(self,other):
         """ Merges this occupied region with an empty region, resolving potentially ambiguous corners """
@@ -60,13 +71,16 @@ class OccupiedRegion:
         to_join = other.open[iside]
         to_join.reverse()
 
-        if not len(to_join) == len(self.open[side]):
-            print [s.points for s in self.segs]
-            print [s.points for s in other.segs]
-            print self.open, other.open
-            print side, iside
-            raise TopologicalImpossibility()
+        defect = len(to_join) - len(self.open[side])
 
+        if defect != 0:
+            if abs(defect) > 2:
+                raise TopologicalImpossibility()
+
+            print "horrid code for resolving ambiguous topology"
+
+            raise TopologicalImpossibility()
+            
         # Now we walk along self.open[side] and to_join in lockstep
         for i in range(len(self.open[side])):
             seg = self.open[side][i]
