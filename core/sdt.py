@@ -5,14 +5,18 @@ from util import sgn
 def square(x):
     return x * x
 
-def reconstruct(coeff,size):
+def reconstruct(coeff,size, old):
     minx, maxx = coeff
 
     if minx is None:
-        return [square(x - maxx) for x in range(0,size)]
-    if maxx is None:
-        return [square(x - minx) for x in range(0,size)]
-    return [min(square(x - minx),square(x - maxx)) for x in range(0,size)]
+        for i in range(0,maxx):
+            old[i] = min([square(i - maxx), old[i]])
+    elif maxx is None:
+        for i in range(minx,size):          
+            old[i] = min([square(i - minx), old[i]])
+    else:
+        for i in range(minx,maxx+1):
+            old[i] = min([old[i], square(i - minx), square(i - maxx)])
 
 def first_pass(samples):
     # we want to turn samples into a piece-wise set of quadratics
@@ -35,9 +39,7 @@ def first_pass(samples):
     output = [ls * ls] * ls
 
     for c in coeffs:
-        v = reconstruct(c,ls)
-        for i, s in enumerate(v):
-            output[i] = min([s, output[i]])
+        reconstruct(c, ls, output)
 
     for i, s in enumerate(output):
         output[i] = math.copysign(s, samples[i])
