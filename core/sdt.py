@@ -5,18 +5,23 @@ from util import sgn
 def square(x):
     return x * x
 
+def spmin(sample,dt):
+    """ Returns a number such that sgn(spmin(x,y)) = sgn(x) and |spmin(x,y)| = min(|x|,|y|) """
+    mag = min(abs(sample),abs(dt))
+    return math.copysign(mag, sample)
+
 def reconstruct(coeff,size, old):
     minx, maxx = coeff
 
     if minx is None:
         for i in range(0,maxx):
-            old[i] = min([square(i - maxx), old[i]])
+            old[i] = spmin(old[i], square(i - maxx))
     elif maxx is None:
         for i in range(minx,size):          
-            old[i] = min([square(i - minx), old[i]])
+            old[i] = spmin(old[i], square(i - minx))
     else:
         for i in range(minx,maxx+1):
-            old[i] = min([old[i], square(i - minx), square(i - maxx)])
+            old[i] = spmin(old[i], min([square(i - minx), square(i - maxx)]))
 
 def first_pass(samples):
     # we want to turn samples into a piece-wise set of quadratics
@@ -35,16 +40,14 @@ def first_pass(samples):
         
     # so now we reconstruct the sample as a bunch of distances
     ls = len(samples)
-        
-    output = [ls * ls] * ls
+
+    for i, s in enumerate(samples):
+        samples[i] = math.copysign(ls * ls, s)
 
     for c in coeffs:
-        reconstruct(c, ls, output)
+        reconstruct(c, ls, samples)
 
-    for i, s in enumerate(output):
-        output[i] = math.copysign(s, samples[i])
-
-    return output
+    return samples
 
 
 
