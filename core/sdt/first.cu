@@ -1,4 +1,3 @@
-
 __device__ int sgn(const float f){
   if(f == 0.0)
     return 0;
@@ -61,4 +60,16 @@ __global__ void horizontal(float* sample, float * dest, const int width, const i
       dest[i] = safe_copysign(square(i - last), sample[i]);
     }
   }
+}
+
+// sampled implicit => one-d signed, squared => rebind as texture (can we eliminate all copies?) => compute unsigned, squared
+
+__global__ void copysign_and_sqrt(float* signs,float* distances,int width,int pitch,int height){ 
+  // takes an array with the correct sign, and an array with the square of the 2-d distance, and
+  // copies the sign from the first...
+  const int x = blockIdx.x * blockDim.x + threadIdx.x;
+  const int y = blockIdx.y * blockDim.y + threadIdx.y;
+  if(width <= x || height <= y) return;
+  int i = y * pitch + x;
+  distances[i] = safe_copysign(sqrtf(distances[i]), signs[i]);
 }
