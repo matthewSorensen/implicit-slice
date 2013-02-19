@@ -4,7 +4,7 @@ def square(x):
     return x * x
 
 def copysign(x,y):
-    if x == 0:
+    if x == 0 or y == 0:
         return 0
     else:
         return math.copysign(x,y)
@@ -29,8 +29,7 @@ def first_pass(samples):
                     samples[x] = copysign(square(i - x), samples[x])
             else:
                 for x in range(last,i+1):
-                    # we can split this in two
-                    samples[x] = copysign(min([square(x -last),square(x - i)]), samples[x])
+                    samples[x] = copysign(square(min([x - last,i - x])),samples[x])
             last = i
         elif ssgn == 0: # by previous, psgn also is 0
             last = i + 1
@@ -38,12 +37,10 @@ def first_pass(samples):
         psgn = ssgn
 
     if last is None:
-        # this implies we have no sign changes, so we replace all the values
-        # with a value guaranteed to be changed in the next passs.
-        ls = square(len(samples))
-        for i, s in enumerate(samples[:]):
-            if s != 0:
-                samples[i] = copysign(ls, s)
+        ls = len(samples)
+        value = copysign(square(ls), samples[0])
+        for i in range(0,ls):
+            samples[i] = value
     else:
         # Otherwise, fill in the last parabola segment
         for i in range(last,len(samples)):
