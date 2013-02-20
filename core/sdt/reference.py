@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 def square(x):
     return x * x
@@ -15,7 +16,7 @@ def sgn(x):
     else:
         return math.copysign(1,x)
 
-def first_pass(samples):
+def horizontal(samples, replace):
     psgn = sgn(samples[0])
     last = None
 
@@ -37,9 +38,8 @@ def first_pass(samples):
         psgn = ssgn
 
     if last is None:
-        ls = len(samples)
-        value = copysign(square(ls), samples[0])
-        for i in range(0,ls):
+        value = copysign(replace + 1, samples[0])
+        for i in range(0,len(samples)):
             samples[i] = value
     else:
         # Otherwise, fill in the last parabola segment
@@ -47,3 +47,53 @@ def first_pass(samples):
             samples[i] = copysign(square(i - last), samples[i])
             
     return samples
+
+inf = float("inf")
+ninf = -1 * inf
+
+def vertical(samples):
+    """ This function is a direct implementation of the distance transform
+    described in 'Distance Transforms of Sampled Functions' """
+
+    k = 0
+    verts = [0 for x in samples]
+    bounds = [ninf,inf] + [0 for x in samples]
+
+    for q, s in enumerate(samples[1:]):
+        q += 1
+        
+        ss = s + square(q)
+
+        inter = ss - samples[verts[k]] - square(verts[k])
+        inter = 0.5 * inter / (q + verts[k])
+        
+        while inter <= bounds[k]:
+            verts[k] = 0
+            k -= 1
+        
+            inter = ss - samples[verts[k]] - square(verts[k])
+            inter = 0.5 * inter / (q + verts[k])
+
+        k += 1
+        verts[k]  = q
+        bounds[k] = inter
+        bounds[k+1] = inf
+     
+    k = 0
+    for q in range(0,len(samples)):
+        while bounds[k+1] < q:
+            k += 1
+
+        dsquared = square(q - verts[k]) + samples[verts[k]]
+        samples[q] = copysign(math.sqrt(dsquared), samples[q])
+
+    return samples
+
+def sdt(sample):
+    width, height = sample.shape
+    for y in range(0,height):
+        horizontal(sample[...,y], square(max(width,height) * 2))
+    for x in range(0, width):
+        vertical(sample[x,...])
+
+    return sample
