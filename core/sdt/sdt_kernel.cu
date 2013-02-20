@@ -51,7 +51,7 @@ __global__ void horizontal(float* sample, float * dest, const int width, const i
     psgn = ssgn;
   }
   if(last == -1){
-    float val = safe_copysign(width * width, sample[0]);
+    float val = safe_copysign(square(fmaxf(width, height) * 2), sample[0]);
     for(int i = 0; i < width; i++){
       dest[i] = val;
     }
@@ -63,6 +63,7 @@ __global__ void horizontal(float* sample, float * dest, const int width, const i
 }
 
 // sampled implicit => one-d signed, squared => rebind as texture (can we eliminate all copies?) => compute unsigned, squared
+
 
 __global__ void copysign_and_sqrt(float* signs,float* distances,int width,int pitch,int height){ 
   // takes an array with the correct sign, and an array with the square of the 2-d distance, and
