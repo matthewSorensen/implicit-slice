@@ -6,7 +6,7 @@ import numpy as np
 dat = [1,2,3,1,2,3,1,0,-1,-1,-1,1,1,1]
 
 test = np.array(dat).astype(np.float32)
-file = open("first.cu","r")
+file = open("sdt_kernel.cu","r")
 mod = SourceModule(file.read())
 horizontal = mod.get_function("horizontal")
 csgns = mod.get_function("copysign_and_sqrt")
