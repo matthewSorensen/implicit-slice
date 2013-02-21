@@ -1,8 +1,7 @@
 import sympy.utilities.codegen as gen
+from sympy.abc import x,y,z
+import sympy.parsing.sympy_parser as parse
 
-from sympy import symbols
-from sympy.utilities.codegen import codegen
-from sympy.abc import x, y, z
 from StringIO import StringIO
 
 import pycuda.autoinit
@@ -41,6 +40,10 @@ __global__ void kernel(float* out, int length, int width, float z){
 """
 
 def compile_expr(expr):
+    if isinstance(expr,str):
+        trans = (parse.standard_transformations + (parse.implicit_multiplication_application,))
+        expr = parse.parse_expr(expr,transformations = trans)
+
     codegen = CUDAGen("implicit-kernel")
     routines = []
     routines.append(gen.Routine("f", expr, [x,y,z]))
