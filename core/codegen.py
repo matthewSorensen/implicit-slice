@@ -1,13 +1,12 @@
 import sympy.utilities.codegen as gen
+from sympy.abc import x,y,z
+import sympy.parsing.sympy_parser as parse
 
-from sympy import symbols
-from sympy.utilities.codegen import codegen
-from sympy.abc import x, y, z
 from StringIO import StringIO
 
 import pycuda.autoinit
 import pycuda.driver as drv
-import numpy
+import numpy as np
 from pycuda.compiler import SourceModule
 
 class CUDAGen(gen.CCodeGen):
@@ -40,20 +39,26 @@ __global__ void kernel(float* out, int length, int width, float z){
 
 """
 
-def cudagen(expr):
-    code_gen = CUDAGen("implicit-kernel")
+def compile_expr(expr):
+    if isinstance(expr,str):
+        trans = (parse.standard_transformations + (parse.implicit_multiplication_application,))
+        expr = parse.parse_expr(expr,transformations = trans)
+
+    codegen = CUDAGen("implicit-kernel")
     routines = []
     routines.append(gen.Routine("f", expr, [x,y,z]))
-    return code_gen.write(routines)
+    module = SourceModule(codegen.write(routines))
+    kernel = module.get_function("kernel")
 
-def test():
-    code = cudagen(x + y )
-    return code
+    def f(dim,z):
+        x, y = dim
+        dest = np.zeros(dim).astype(np.float32)
 
-mod = SourceModule(test())
+        gx = int((x + 31) / 32)
+        gy = int((y + 31) / 32)
 
-f = mod.get_function("kernel")
-dest = numpy.zeros((10,10)).astype(numpy.float32)
+        kernel(drv.Out(dest),np.int32(x),np.int32(y),np.float32(z), block = (32,32,1), grid = (int(gx), int(gy), 1))
 
-f(drv.Out(dest),numpy.int32(10),numpy.int32(10),numpy.float32(1), block=(10,10,1), grid=(1,1))
-print dest
+        return dest
+
+    return f
