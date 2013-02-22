@@ -1,9 +1,13 @@
 import numpy as np
 from math import ceil
+from codegen import compile_expr
 
-
-def gpu_eval():
-    return None
+def gpu_eval(res, dz, zmax expr):
+    f = compile_expr(expr)
+    z = 0
+    while z <= zmax:
+        yield f(res,z), z
+        z += dz
 
 def cpu_eval(maxes, res, dz, func):
     z = 0
