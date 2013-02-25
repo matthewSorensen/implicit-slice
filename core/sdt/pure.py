@@ -69,7 +69,7 @@ def voxel_first_pass(samples,replace):
             samples[i] = copysign(square(i - last), samples[i])
     return samples
 
-inf = float("1e20")
+inf = float("inf")
 ninf = -1 * inf
 
 def second_pass(samples, bounds, verts, cache):
@@ -117,19 +117,18 @@ def second_pass(samples, bounds, verts, cache):
 
 def sdt(sample,implicit = True):
     width, height = sample.shape
-    replacement = square(max(width,height)*2)
+    replacement = square(max(width, height) *2)
     if implicit:
-        for y in range(0,height):
-            implicit_first_pass(sample[...,y], replacement)
+        for row in sample:
+            implicit_first_pass(row, replacement)
     else:
-        for y in range(0,height):
-            voxel_first_pass(sample[...,y], replacement)
+        for row in sample:
+            voxel_first_pass(row, replacement)
 
     bounds = np.zeros((height + 1,1)).astype(np.float32)
     verts  = np.zeros((height, 1)).astype(np.int32)
     cache  = np.zeros((height, 1)).astype(np.float32)
 
-    for x in range(0, width):
-       second_pass(sample[x,...],bounds,verts, cache)
+    for row in sample.transpose():
+        second_pass(row,bounds,verts, cache)
     return sample
-
