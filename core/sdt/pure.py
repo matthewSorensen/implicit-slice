@@ -72,7 +72,7 @@ def voxel_first_pass(samples,replace):
 inf = float("1e20")
 ninf = -1 * inf
 
-def second_pass(samples, bounds, verts):
+def second_pass(samples, bounds, verts, cache):
     """ This function is a direct implementation of the distance transform
     described in 'Distance Transforms of Sampled Functions' """
 
@@ -80,28 +80,29 @@ def second_pass(samples, bounds, verts):
     bounds[0] = ninf
     bounds[1] = inf
     verts[0] = 0
+    cache[0] = abs(samples[0])
 
     for q, s in enumerate(samples[1:]):
         q += 1
-        
-        ss = abs(s) + square(q)
+        s = abs(s)
 
-        inter = ss - abs(samples[verts[k]]) - square(verts[k])
+        ss = s + square(q)
+
+        inter = ss - cache[k] - square(verts[k])
         inter = inter / (2 * float(q - verts[k]))
         
         while inter <= bounds[k]:
             verts[k] = 0
             k -= 1
        
-            inter = ss - abs(samples[verts[k]]) - square(verts[k])
+            inter = ss - cache[k] - square(verts[k])
             inter = inter / (2 * float(q - verts[k]))
 
         k += 1
         verts[k]  = q
+        cache[k]  = s
         bounds[k] = inter
         bounds[k+1] = inf
-
-    cache = [abs(samples[verts[k]]) for k in range(0,k+1)]
 
     k = 0
 
@@ -109,8 +110,8 @@ def second_pass(samples, bounds, verts):
         while bounds[k+1] < q:
             k += 1
 
-        dsquared = square(q - verts[k]) + cache[k] # samples[verts[k]]
-        samples[q] = copysign(math.sqrt(abs(dsquared)), samples[q])
+        dsquared = square(q - verts[k]) + cache[k]
+        samples[q] = copysign(math.sqrt(dsquared), samples[q])
 
     return samples
 
@@ -126,8 +127,9 @@ def sdt(sample,implicit = True):
 
     bounds = np.zeros((height + 1,1)).astype(np.float32)
     verts  = np.zeros((height, 1)).astype(np.int32)
+    cache  = np.zeros((height, 1)).astype(np.float32)
 
     for x in range(0, width):
-       second_pass(sample[x,...],bounds,verts)
+       second_pass(sample[x,...],bounds,verts, cache)
     return sample
 
