@@ -15,3 +15,12 @@ modulefile.close()
 implicit_first_pass = module.get_function("implicit_first_pass")
 voxel_first_pass = module.get_function("voxel_first_pass")
 
+def sdt(samples, implicit = True):
+    width, height = sample.shape
+
+    if implicit:
+        implicit_first_pass(drv.InOut(sample.astype(np.float32)), np.int32(width), np.int32(width),np.int32(height))
+    else:
+        voxel_first_pass(drv.InOut(sample.astype(np.float32)), np.int32(width), np.int32(width),np.int32(height))
+
+    return samples
