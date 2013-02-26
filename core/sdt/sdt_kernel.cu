@@ -104,14 +104,17 @@ __global__ void voxel_first_pass(float* sample, const int width, const int heigh
   }
 }
 
+__global__ void second_pass(float* bounds,int* verts, float* out,int width, int height){
+
+}
+
+
+//    second_pass(bounds,verts,drv.Out(sample), width, height, block = block, grid = (bls, 1))
+
+
 // sampled implicit => one-d signed, squared => rebind as texture (can we eliminate all copies?) => compute unsigned, squared
 
-__global__ void copysign_and_sqrt(float* signs,float* distances,int width,int pitch,int height){ 
-  // takes an array with the correct sign, and an array with the square of the 2-d distance, and
-  // copies the sign from the first...
-  const int x = blockIdx.x * blockDim.x + threadIdx.x;
-  const int y = blockIdx.y * blockDim.y + threadIdx.y;
-  if(width <= x || height <= y) return;
-  int i = y * pitch + x;
-  distances[i] = safe_copysign(sqrtf(distances[i]), signs[i]);
+
+__global__ void sign_and_sqrt(float* values, float* output, int width, int height){
 }
+

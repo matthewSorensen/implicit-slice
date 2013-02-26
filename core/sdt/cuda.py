@@ -16,14 +16,35 @@ modulefile.close()
 # Pull out a number of functions that we need
 implicit_first_pass = module.get_function("implicit_first_pass")
 voxel_first_pass = module.get_function("voxel_first_pass")
+second_pass = module.get_function("second_pass")
+sign_and_sqrt = module.get_function("sign_and_sqrt")
+
+def blocks(shape):
+    size = 32
+    x, y = shape
+    return int((x + size -1) / size),int((y + size -1) / size), size
 
 def sdt(sample, implicit = True):
-    width, height = sample.shape
-    bls = int((height + 127) / 128)
-  
-    if implicit:
-        implicit_first_pass(drv.InOut(sample), np.int32(width), np.int32(height),block = (128,1,1), grid=(bls,1))
-    else:
-        voxel_first_pass(drv.InOut(sample), np.int32(width), np.int32(height), block = (128,1,1), grid = (bls,1))
+    blsx, blsy, threads = blocks(sample.shape)
+    sgpu = gpu.to_gpu(sample)
 
+    width, height = sample.shape
+    iwidth, iheight = np.int32(width), np.int32(height)
+
+    oneblock = (threads,1,1)
+    twoblock = (threads,threads,1)
+
+    if implicit:
+        implicit_first_pass(sgpu, iwidth, iheight,block = oneblock, grid=(blsx,1))
+    else:
+        voxel_first_pass(sgpu, iwidth, iheight, block = oneblock, grid = (blsy,1))
+    # Now the GPU version of samples is a set of 2D signed distances.
+    # Then, allocate GPU temporary storage for bounds and vertexes
+    bounds = gpu.empty((height + 1, width),np.float32)
+    verts  = gpu.empty((height, width),np.int32)
+    unsigned = gpu.empty((width,height),np.float32)
+    # todo: bind sgpu as texture
+    second_pass(bounds,verts,unsigned, iwidth, iheight, block = oneblock, grid = (blsy, 1))
+    sign_and_sqrt(unsigned, drv.Out(sample), iwidth, iheight, block = twoblock, grid = (blsx, blsy))
+    # ensure that sgpu, bounds, verts, unsigned are free. No idea how to do that...
     return sample
