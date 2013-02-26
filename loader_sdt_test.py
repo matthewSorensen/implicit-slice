@@ -1,4 +1,4 @@
-from core.sdt.pure import sdt
+from core.sdt.cuda import sdt
 from  core.loader import cpu_eval
 import matplotlib.pyplot as plt
 
