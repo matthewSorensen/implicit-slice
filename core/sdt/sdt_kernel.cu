@@ -78,9 +78,7 @@ __global__ void voxel_first_pass(float* sample, const int width, const int heigh
 
     if(ssgn != psgn){
       int upper = i;
-      if(psgn == 0)
-	upper--;
-   
+     
       if(last == -1){
 	for(int x = 0; x < upper; x++){
 	  sample[x] = safe_copysign(square(x - upper), sample[x]);
@@ -91,8 +89,6 @@ __global__ void voxel_first_pass(float* sample, const int width, const int heigh
 	}
       }
       last = upper;
-    } else if (ssgn == 0){
-      last = i + 1;
     }
     psgn = ssgn;
   }
