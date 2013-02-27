@@ -1,6 +1,4 @@
 
-texture<float,2, cudaReadModeElementType> tex;
-
 __device__ int sgn(const float f){
   if(f == 0.0)
     return 0;
@@ -106,10 +104,51 @@ __global__ void voxel_first_pass(float* sample, const int width, const int heigh
   }
 }
 
+#define INF 0x7f800000
+#define NINF 0xff800000 
+
 
 __global__ void second_pass(float* twod, float* bounds,int* verts, float* out,int width, int height){
-  // const int x = blockIdx.x * blockDim.x + threadIdx.x;
-  // if(width <= x) return;
+  const int y = blockIdx.x * blockDim.x + threadIdx.x;
+  if(height <= y) return;
+  twod = &(twod[y * width]);
+  out = &(out[y * width]);
+  bounds = &(bounds[y * (width + 1)]);
+  verts = &(verts[y * width]);
+  
+  int k = 0;
+  bounds[0] = NINF;
+  bounds[1] = INF;
+  verts[0] = 0;
+  
+  for(int q = 1; q < width; q++){
+    float sample = fabsf(twod[q]);
+    float ss = sample + square(q);
+    float inter = ss - fabsf(twod[verts[k]]) - square(verts[k]);
+    
+    inter *= 0.5 / (q - verts[k]);
+    
+    while(inter <= bounds[k]){
+      verts[k] = 0;
+      k--;
+      inter = ss - fabsf(twod[verts[k]]) - square(verts[k]);
+      inter *= 0.5 / (q - verts[k]);
+    }
+    
+    k++;
+    verts[k]  = q;
+    bounds[k] = inter;
+    bounds[k+1] = INF;
+  }
+  
+  k = 0;
+  for(int q = 0; q < width; q++){
+    while(bounds[k+1] < q)
+      k++;
+    out[q] = square(q - verts[k]) + fabsf(twod[verts[k]]);
+    }
+
+
 }
 
 __global__ void sign_and_sqrt(float* signs, float* values, float* output, int width, int height){
@@ -118,6 +157,6 @@ __global__ void sign_and_sqrt(float* signs, float* values, float* output, int wi
   if(width <= x || height <= y) return;
   int i = x + width * y;
 
-  output[i] = safe_copysign(signs[i],values[i]);
+  output[i] = safe_copysign(signs[i],sqrtf(values[i]));
 }
 
