@@ -37,50 +37,48 @@ __global__ void fast_parsdt(int* samples, int width, const int height){
     width >>= 1;
 
     int base = frame & ~3;
-
-    int llv = verts[base];
-    int llc = coeffs[base];
-    int lhv = verts[base+1];
-    int lhc = coeffs[base+1];
-
-    int hlv = verts[base+2];
-    int hlc = coeffs[base+2];
-    int hhv = verts[base+3];
-    int hhc = coeffs[base+3];
-   
-    int low  = min(square(y - llv) + llc,square(y - lhv) + lhc);
-    int high = min(square(y - hhv) + hhc,square(y - hlv) + hlc);
-
-    out = min(out, min(low,high));
-    int dest = (frame>>1) & ~1;
-     
+    int dest = (frame>>1) & ~1; 
     int par = y & mask;
 
-    __syncthreads();
+    int lowest = square(y - verts[base]) + coeffs[base];
+    int low = square(y - verts[base + 1]) + coeffs[base + 1];
+    int high = square(y - verts[base + 2]) + coeffs[base + 2];
+    int highest = square(y - verts[base + 3]) + coeffs[base + 3];
+
+    out = min(out,min(min(lowest,low),min(high,highest)));
+
+    int vertex = 0;
+    int coefficient = 0;
 
     if(par == 0){
-      if((square(y - llv ) + llc) < square(y - hlv) + hlc){
-	coeffs[dest] = llc;
-	verts[dest] = llv;
+      if(high < lowest){
+	vertex = verts[base + 2];
+	coefficient = coeffs[base + 2];
       }else{
-	coeffs[dest] = hlc;
-	verts[dest] = hlv;
+	vertex = verts[base];
+	coefficient = coeffs[base];
       }
-    }else if(par == mask){
-      if(square(y - hhv) + hhc < square(y - lhv) + lhc){
-	coeffs[dest+1] = hhc;
-	verts[dest+1] = hhv;
+    }else if (par == mask){
+      if(low <  highest){
+	vertex = verts[base + 1];
+	coefficient = coeffs[base + 1];
       }else{
-	coeffs[dest+1] = lhc;
-	verts[dest+1] = lhv;
+	vertex = verts[base + 3];
+	coefficient = coeffs[base + 3];
       }
+      par = 1;
+    }else{
+      par = 2;
     }
-
+    __syncthreads();
+    if(par < 2){
+      coeffs[dest + par] = coefficient;
+      verts[dest + par] = vertex;
+    }
     __syncthreads();
 
     frame = dest;
-    mask = (mask << 1) + 1;
-    
+    mask = (mask << 1) + 1;    
   }
    
   *sample = out;  
