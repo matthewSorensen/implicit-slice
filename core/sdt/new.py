@@ -52,7 +52,7 @@ def go(i,data,verts,coeffs):
         dest = (j>>1) & ~1
 
         # choose two threads to write the top and bottom of the new frame
-        if i == i & mask:
+        if 0 == (i % size):
             print "thread",i,"is merging bottom"
 
             existingv = verts[j]
@@ -67,14 +67,14 @@ def go(i,data,verts,coeffs):
                 verts[dest] = existingv
                 coeffs[dest] = existingc
 
-        elif i == ((i & mask) + size): # we must choose the correct size
+        elif  (size-1) == (i % size):
 
             print "thread",i,"is merging top"
 
-            existingv = verts[j+1]
-            existingc = coeffs[j+1]
-            otherv = verts[j+3]
-            otherc = coeffs[j+3]
+            existingv = verts[j-1]
+            existingc = coeffs[j-1]
+            otherv = verts[j+1]
+            otherc = coeffs[j+1]
 
             if (square(i -otherv) + otherc) < (square(i -existingv) + existingc):
                 verts[dest+1] = otherv
@@ -85,7 +85,6 @@ def go(i,data,verts,coeffs):
                         
         yield
         j = dest
-        mask = (mask << 1) + 1
         size = size << 1
         
     data[i] = out
