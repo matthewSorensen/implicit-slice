@@ -15,7 +15,7 @@ sdt = mod.get_function("fast_parsdt")
 data = [128 * 128 for x in range(0,128)]
 data[20] = 0
 data[64] = 0
-data[82] = 240
+data[82] = 200
 data[100] = 0
 data = np.array(data).astype(np.int32)
 
