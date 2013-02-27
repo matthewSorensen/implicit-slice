@@ -4,17 +4,17 @@ __device__ int square(int x){
   return x*x;
 }
 
-__global__ void fast_parsdt(const int* samples, const int width, int height){
+__global__ void fast_parsdt(int* samples, int width, const int height){
 
   __shared__ int coeffs[MAXBLOCK];
   __shared__ int verts[MAXBLOCK];
 
-  // this requires that the thread size is (1,length of data)
-  const int x = blockIdx.x * blockDim.x + threadIdx.x;
-  const int y = blockIdx.y * blockDim.y + threadIdx.y;
-  const int* sample = &(samples[x + y * width]);
+  // this requires that the thread size is (length of data,1)
+  const int x = blockIdx.y * blockDim.y + threadIdx.y;
+  const int y = blockIdx.x * blockDim.x + threadIdx.x;
+  int* sample = &(samples[y + x * width]);
   int out = *sample;
-
+ 
   // Perform the first set of reductions
   coeffs[y] = out;
   __syncthreads();
@@ -31,15 +31,16 @@ __global__ void fast_parsdt(const int* samples, const int width, int height){
   __syncthreads();  
   
   int frame = y & ~1;
-  int mask = 3;
-  
-  while(height > 0){
-    height >>= 1;
-  
-    int low = square(y - verts[j]) + coeffs[j];
-    int high = square(y - verts[j+1]) + coeffs[j+1];
+  int mask = 3; 
 
-    out = min(out, min(lower,higher));
+  while(width > 0){
+    width >>= 1;
+
+    int base = frame & ~3;
+    int low = min(square(y - verts[frame]) + coeffs[frame], square(y - verts[frame +1]) + coeffs[frame +1]);
+    int high = min(square(y - verts[frame + 2]) + coeffs[frame + 2], square(y - verts[frame +3]) + coeffs[frame +3]);
+
+    out = min(out, min(low,high));
     int dest = (frame>>1) & ~1;
       
     __syncthreads();
@@ -49,22 +50,22 @@ __global__ void fast_parsdt(const int* samples, const int width, int height){
     if(par == 0){
       int otherv = verts[frame + 2];
       int otherc = coeffs[frame + 2];
-      if(square(y - otherv) + otherc < low){
+      if((square(y - otherv) + otherc) < low){
 	coeffs[dest] = otherc;
 	verts[dest] = otherv;
       }else{
-	coeffs[dest] = coeffs[j];
-	verts[dest] = verts[j];
+	coeffs[dest] = coeffs[frame];
+	verts[dest] = verts[frame];
       }
     }else if(par == mask){
       int otherv = verts[frame - 1];
       int otherc = coeffs[frame - 1];
-      if(square(y - otherv) + otherc < high){
+      if((square(y - otherv) + otherc) < high){
 	coeffs[dest + 1] = otherc;
 	verts[dest + 1] = otherv;
       }else{
-	coeffs[dest + 1] = coeffs[j+1];
-	verts[dest + 1] = verts[j+1];
+	coeffs[dest + 1] = coeffs[frame+1];
+	verts[dest + 1] = verts[frame+1];
       }
     }
 
@@ -75,5 +76,5 @@ __global__ void fast_parsdt(const int* samples, const int width, int height){
     
   }
    
-  *sample = out;
+  *sample = out;  
 }

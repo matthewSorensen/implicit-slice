@@ -2,17 +2,23 @@ import pycuda.driver as drv
 import pycuda.autoinit
 from pycuda.compiler import SourceModule
 import numpy as np
+from pylab import *
 
 dat = [1,2,3,1,2,3,1,0,-1,-1,-1,1,1,1]
 
 test = np.array(dat).astype(np.float32)
-file = open("sdt_kernel.cu","r")
+file = open("fast_parsdt.cu","r")
 mod = SourceModule(file.read())
-horizontal = mod.get_function("horizontal")
-csgns = mod.get_function("copysign_and_sqrt")
+sdt = mod.get_function("fast_parsdt")
 
-dest = np.zeros((len(dat),1)).astype(np.float32)
 
-horizontal(drv.In(test),drv.Out(dest),np.int32(len(dat)),np.int32(0),np.int32(10), block=(len(dat),1,1), grid=(1,1))
-print "computed 1-d sdt: ", dest
+data = [128 * 128 for x in range(0,128)]
+data[20] = 0
+data[64] = 0
+data[82] = 240
+data[100] = 0
+data = np.array(data).astype(np.int32)
 
+sdt(drv.InOut(data),np.int32(128),np.int32(0), block = (128,1,1), grid = (1,1))
+plot(data)
+show()
