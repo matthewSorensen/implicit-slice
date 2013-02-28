@@ -46,38 +46,33 @@ def go(i,data,verts,coeffs):
         base = j & ~3;
         dest = (j >> 1) & ~1
         par = i & mask
-        
-        lowest = square(i - verts[base]) + coeffs[base]
+        offset = base ^ j
+        half = offset >> 1
+        offset = offset | half
+        antioffset = (2 + offset) & 3
+
         low = square(i - verts[base + 1]) + coeffs[base + 1]
         high = square(i - verts[base + 2]) + coeffs[base + 2]
-        highest = square(i - verts[base + 3]) + coeffs[base + 3]
+        extreme = square(i - verts[base + offset]) + coeffs[base + offset]
 
-        out = min(out,lowest,low,high,highest)
-
+        out = min(out,high,low,extreme)
+        
         vertex = None
         coefficient = None
 
-        if par == 0:
-            if high < lowest:
-                vertex = verts[base + 2]
-                coefficient = coeffs[base + 2]
+        if par == 0 or par == mask:
+            if high < extreme or low < extreme:
+                vertex = verts[base + antioffset]
+                coefficient = coeffs[base + antioffset]
             else:
-                vertex = verts[base]
-                coefficient = coeffs[base]      
-        elif par == mask:
-            if low <  highest:
-                vertex = verts[base + 1]
-                coefficient = coeffs[base + 1]
-            else:
-                vertex = verts[base + 3]
-                coefficient = coeffs[base + 3]
-                par = 1
-    
+                vertex = verts[base + offset]
+                coefficient = coeffs[base + offset]
+        
         yield
         
         if not vertex is None:
-            coeffs[dest + par] = coefficient;
-            verts[dest + par] = vertex;
+            coeffs[dest + half] = coefficient;
+            verts[dest + half] = vertex;
     
         yield
 
