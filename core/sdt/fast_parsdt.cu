@@ -38,51 +38,42 @@ __global__ void fast_parsdt(int* samples, int width, const int height){
     width >>= 1;
 
     int base = frame & ~3;
-    int dest = (frame>>1) & ~1; 
+    int dest = base >> 1;
+
+    int offset = base ^ frame;
+    int half = offset >> 1;
+    offset = offset | half;
+
     int par = y & mask;
 
-    int lowest = square(y - verts[base]) + coeffs[base];
     int low = square(y - verts[base + 1]) + coeffs[base + 1];
     int high = square(y - verts[base + 2]) + coeffs[base + 2];
-    int highest = square(y - verts[base + 3]) + coeffs[base + 3];
+    int extreme = square(y - verts[base + offset]) + coeffs[base + offset];
 
-    out = min(out,min(min(lowest,low),min(high,highest)));
-
-    int vertex = 0;
-    int coefficient = 0;
-
-    if(par == 0){
-      if(high < lowest){
-	vertex = verts[base + 2];
-	coefficient = coeffs[base + 2];
-      }else{
-	vertex = verts[base];
-	coefficient = coeffs[base];
+    out = min(out,min(high,min(low,extreme)));
+    
+    if(par == 0 || par == mask){
+      if(high < extreme || low < extreme){
+	offset = (offset + 2) & 3;
       }
-    }else if (par == mask){
-      if(low <  highest){
-	vertex = verts[base + 1];
-	coefficient = coeffs[base + 1];
-      }else{
-	vertex = verts[base + 3];
-	coefficient = coeffs[base + 3];
-      }
-      par = 1;
+      
+      int vertex = verts[base + offset];
+      int coefficient = coeffs[base + offset];
+      
+      __syncthreads();
+      coeffs[dest + half] = coefficient;
+      verts[dest + half] = vertex;
+      __syncthreads();
     }else{
-      par = 2;
+      __syncthreads();
+      __syncthreads();
     }
-    __syncthreads();
-    if(par < 2){
-      coeffs[dest + par] = coefficient;
-      verts[dest + par] = vertex;
-    }
-    __syncthreads();
-
+    
     frame = dest;
     mask = (mask << 1) + 1;    
   }
-
+  
   if(original < 0) out = -1 * out;
- 
+  
   *sample = out;  
 }
