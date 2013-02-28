@@ -4,21 +4,21 @@ from pycuda.compiler import SourceModule
 import numpy as np
 from pylab import *
 
-dat = [1,2,3,1,2,3,1,0,-1,-1,-1,1,1,1]
+first = open("fast_firstpass.cu","r")
+first = SourceModule(first.read())
+first = first.get_function("fast_firstpass")
 
-test = np.array(dat).astype(np.float32)
-file = open("fast_parsdt.cu","r")
-mod = SourceModule(file.read())
-sdt = mod.get_function("fast_parsdt")
+edt = open("fast_parsdt.cu","r")
+edt = SourceModule(edt.read())
+edt = edt.get_function("fast_parsdt")
 
+data = [(lambda x: x*x - 0.0625)((x-64.0)/128.0) for x in range(0,128)]
+data = np.array(data).astype(np.float32)
 
-data = [128 * 128 for x in range(0,128)]
-data[20] = 0
-data[64] = 0
-data[82] = 200
-data[100] = 0
-data = np.array(data).astype(np.int32)
+output = np.zeros((128,1)).astype(int32)
 
-sdt(drv.InOut(data),np.int32(128),np.int32(0), block = (128,1,1), grid = (1,1))
-plot(data)
+first(drv.In(data),drv.Out(output),np.int32(128),np.int32(1), block = (16,16,1), grid = (8,1))
+edt(drv.InOut(output),np.int32(128),np.int32(1), block = (128,1,1), grid = (1,1))
+
+plot(output)
 show()

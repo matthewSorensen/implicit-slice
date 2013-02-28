@@ -13,7 +13,8 @@ __global__ void fast_parsdt(int* samples, int width, const int height){
   const int x = blockIdx.y * blockDim.y + threadIdx.y;
   const int y = blockIdx.x * blockDim.x + threadIdx.x;
   int* sample = &(samples[y + x * width]);
-  int out = *sample;
+  int original = *sample;
+  int out = abs(original);
  
   // Perform the first set of reductions
   coeffs[y] = out;
@@ -80,6 +81,8 @@ __global__ void fast_parsdt(int* samples, int width, const int height){
     frame = dest;
     mask = (mask << 1) + 1;    
   }
-   
+
+  if(original < 0) out = -1 * out;
+ 
   *sample = out;  
 }
