@@ -48,7 +48,7 @@ __global__ void extract_zeros(float* implicit,int* output, int width,int height)
 
 #define MAXBLOCK 512
 
-__global__ void edt_pass(int* samples, int width, const int height){
+__global__ void edt_pass(int* samples, const int width, const int height, const int dim){
 
   __shared__ int coeffs[MAXBLOCK];
   __shared__ int verts[MAXBLOCK];
@@ -59,27 +59,40 @@ __global__ void edt_pass(int* samples, int width, const int height){
   int* sample = &(samples[x + y * width]);
   int original = *sample;
   int out = abs(original);
+
+  int frame;
+  int pos;
+  int size;
+  if(dim){
+    frame = y & ~1;
+    pos = y;
+    size = height;
+  }else{
+    frame = x & ~1;
+    pos = x;
+    size = width;
+  }
  
   // Perform the first set of reductions
-  coeffs[x] = out;
+  coeffs[pos] = out;
   __syncthreads();
-  int otherindex = x ^ 1;
+  int otherindex = pos ^ 1;
   int otherdata = coeffs[otherindex];
 
   if(out > otherdata){
-    coeffs[x] = otherdata + 1;
-    verts[x] = otherindex;
+    coeffs[pos] = otherdata + 1;
+    verts[pos] = otherindex;
   }else{
-    verts[x] = x;
+    verts[pos] = pos;
   }
   
   __syncthreads();  
-  
-  int frame = x & ~1;
+
+
   int mask = 3; 
 
-  while(width > 0){
-    width >>= 1;
+  while(size > 0){
+    size >>= 1;
 
     int base = frame & ~3;
     int dest = base >> 1;
@@ -88,11 +101,11 @@ __global__ void edt_pass(int* samples, int width, const int height){
     int half = offset >> 1;
     offset = offset | half;
 
-    int par = x & mask;
+    int par = pos & mask;
 
-    int low = square(x - verts[base + 1]) + coeffs[base + 1];
-    int high = square(x - verts[base + 2]) + coeffs[base + 2];
-    int extreme = square(x - verts[base + offset]) + coeffs[base + offset];
+    int low = square(pos - verts[base + 1]) + coeffs[base + 1];
+    int high = square(pos - verts[base + 2]) + coeffs[base + 2];
+    int extreme = square(pos - verts[base + offset]) + coeffs[base + offset];
 
     out = min(out,min(high,min(low,extreme)));
     
