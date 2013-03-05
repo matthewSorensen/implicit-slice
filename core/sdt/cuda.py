@@ -14,8 +14,9 @@ module = SourceModule(modulefile.read())
 modulefile.close()
 
 # Pull out a number of functions that we need
-extract_zeros = module.get_function("extract_zeros")
+binarize = module.get_function("binarize")
 edt_pass = module.get_function("edt_pass")
+sqrt = module.get_function("signed_sqrt")
 
 def blocks(shape):
     size = 32
@@ -35,35 +36,14 @@ def sdt(sample, implicit = True):
     if x > 512 or y > 512 or 1 != bits(x) or 1 != bits(y):
         raise ValueError("all array dimensions must be a power of two <= 512")
 
-    zeros = np.zeros(sample.shape,np.int32)
+    zeros = gpu.empty(sample.shape,np.int32)
 
-    extract_zeros(drv.In(sample),drv.Out(zeros), np.int32(x), np.int32(y), block = (16,16,1), grid = (x >> 4, y >> 4))
+    binarize(drv.In(sample),zeros, np.int32(x), np.int32(y), block = (16,16,1), grid = (x >> 4, y >> 4))
+    edt_pass(zeros,np.int32(x),np.int32(y), np.int32(0), block = (x,1,1), grid = (1,y))
+    edt_pass(zeros,np.int32(x),np.int32(y), np.int32(1), block = (1,y,1), grid = (x,1))
 
-    edt_pass(drv.InOut(zeros),np.int32(x),np.int32(y), block = (x,1,1), grid = (1,y))
+    out = np.zeros(sample.shape).astype(np.float32)
+    sqrt(zeros,drv.Out(out), np.int32(x), np.int32(y), block = (16,16,1), grid = (x >> 4, y >> 4))
 
-    return zeros
+    return out
 
-# blsx, blsy, threads = blocks(sample.shape)
- #   sgpu = gpu.to_gpu(sample)
-
-  #  width, height = sample.shape
-#    iwidth, iheight = np.int32(width), np.int32(height)
-
- #   oneblock = (threads,1,1)
-  #  twoblock = (threads,threads,1)
-
-   # if implicit:
-    #    implicit_first_pass(sgpu, iwidth, iheight,block = oneblock, grid=(blsx,1))
-   # else:
- #       voxel_first_pass(sgpu, iwidth, iheight, block = oneblock, grid = (blsx,1))
-#
-    # Now the GPU version of samples is a set of 2D signed distances.
-    # Then, allocate GPU temporary storage for bounds and vertexes
- #   bounds = gpu.empty((width+1,height),np.float32)
-  #  verts  = gpu.empty((width,height),np.int32)
-   # unsigned = gpu.empty((width,height),np.float32)
-    
-   # second_pass(sgpu,bounds,verts,unsigned, iwidth, iheight, block = oneblock, grid = (blsy, 1))
-    #sign_and_sqrt(sgpu,unsigned, drv.Out(sample), iwidth, iheight, block = twoblock, grid = (blsx, blsy))
-    # ensure that sgpu, bounds, verts, unsigned are free. No idea how to do that...
-   # return sample
