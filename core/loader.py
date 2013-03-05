@@ -21,7 +21,7 @@ def cpu_eval(maxes, res, dz, func):
     sx = 1 / sx
     sy = 1 / sy
     while z <= maxes[2]:
-        array = np.fromfunction(lambda x,y: func(x * sx, y * sy, z), shape)
+        array = np.fromfunction(lambda x,y: func(x * sx, y * sy, z), shape, dtype = np.float32)
         yield array, z
         z += dz
 
