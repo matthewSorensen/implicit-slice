@@ -1,17 +1,10 @@
 import pycuda.driver as drv
-import pycuda.autoinit
-from pycuda.compiler import SourceModule
-import numpy as np
-from os.path import abspath, dirname, join
-
 import pycuda.gpuarray as gpu
+import numpy as np
 
-# Load and compile the files containing all kernels needed for
-# sdt.
-modulepath = join(dirname(abspath(__file__)), "kernels.cu")
-modulefile = open(modulepath, "r")
-module = SourceModule(modulefile.read())
-modulefile.close()
+import kernel
+
+module = kernel.load_module("sdt.cu")
 
 # Pull out a number of functions that we need
 binarize = module.get_function("binarize")

@@ -2,11 +2,18 @@
 """ This module simplifies the interface for loading CUDA kernels as executable
 python functions. (C) 2013, MDS """
 
-import pycuda.gpuarray.vec as vec
+from os.path import abspath, dirname, join
+import pycuda.gpuarray as gpu
+import pycuda.autoinit
+from pycuda.compiler import SourceModule
 
+basedir = dirname(abspath(__file__))
 
-# make actually loading a kernel or module simple.
-
+def load_module(name):
+    modulefile = open(join(basedir, "kernels", name), "r")
+    module = SourceModule(modulefile.read())
+    modulefile.close()
+    return module
 
 def dim(array):
     """ Returns the size of a 2D array as a CUDA int2. Takes either an array or a 2-tuple """
@@ -14,7 +21,7 @@ def dim(array):
         array = array.shape
     except AttributeError:
         None # We we thus assume array is a valid shape
-    return vec.make_int2(*array)
+    return gpu.vec.make_int2(*array)
 
 def blockgrid(block,size):
     """ Takes a 1 or 2D block size and the 2D size of the number of threads to run, and 
