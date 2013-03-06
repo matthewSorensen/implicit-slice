@@ -13,13 +13,14 @@ __device__ int square(int x){
   return x*x;
 }
 
-__global__ void binarize(float* implicit,int* output, int width,int height){
-  // We are going with 16*16 blocks, so we need (16 + 2) * 16 bytes per thread
+__global__ void binarize(int* output, int2 size, float* implicit){
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
-  const int i = x + y * width;
-  const int replace = square(max(width,height));
-
+  const int i = x + y * size.x;
+  const int replace = square(max(size.x,size.y));
+  
+  if(size.x <= x || size.y <= y) return;
+  
   output[i] = sgn(implicit[i]) * replace;
 }
 
@@ -153,11 +154,11 @@ __global__ void edt_pass(int* samples, const int width, const int height, const 
 
 
 
-__global__ void signed_sqrt(int* values, float* output, int width, int height){
+__global__ void signed_sqrt(int* values, int2 size, float* output){ // int width, int height){
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
-  if(width <= x || height <= y) return;
-  const int i = x + width * y;
+  if(size.x <= x || size.y <= y) return;
+  const int i = x + size.x * y;
 
   float out = 1.0;
   int value = values[i];
@@ -167,6 +168,6 @@ __global__ void signed_sqrt(int* values, float* output, int width, int height){
     value = -1 * value;
   }
 
-  output[i] = out * sqrtf((float) value) / ((float) min(width,height));
+  output[i] = out * sqrtf((float) value) / ((float) min(size.y,size.x));
 }
 

@@ -7,14 +7,10 @@ import kernel
 module = kernel.load_module("sdt.cu")
 
 # Pull out a number of functions that we need
-binarize = module.get_function("binarize")
 edt_pass = module.get_function("edt_pass")
-sqrt = module.get_function("signed_sqrt")
+sqrt = kernel.map_over_first(module.get_function("signed_sqrt"), 16)
+binarize = kernel.map_over_first(module.get_function("binarize"), 16)
 
-def blocks(shape):
-    size = 32
-    x, y = shape
-    return int((x + size -1) / size),int((y + size -1) / size), size
 
 def bits(i):
     b = 0
@@ -30,13 +26,13 @@ def sdt(sample, implicit = True):
         raise ValueError("all array dimensions must be a power of two <= 512")
 
     zeros = gpu.empty(sample.shape,np.int32)
+    binarize(zeros, drv.In(sample))
 
-    binarize(drv.In(sample),zeros, np.int32(x), np.int32(y), block = (16,16,1), grid = (x >> 4, y >> 4))
     edt_pass(zeros,np.int32(x),np.int32(y), np.int32(0), block = (x,1,1), grid = (1,y))
     edt_pass(zeros,np.int32(x),np.int32(y), np.int32(1), block = (1,y,1), grid = (x,1))
 
     out = np.zeros(sample.shape).astype(np.float32)
-    sqrt(zeros,drv.Out(out), np.int32(x), np.int32(y), block = (16,16,1), grid = (x >> 4, y >> 4))
+    sqrt(zeros, drv.Out(out))
 
     return out
 
