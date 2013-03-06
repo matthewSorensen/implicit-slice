@@ -110,3 +110,5 @@ def from_sdf_corners(region,sdf):
         start = center  + tmin * grad
         end = tmax * grad + center 
         return Polyline(start,end)
+
+# Look into homothetic centers to perform initial segment fitting. With some assumptions, these give correct results.
