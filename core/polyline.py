@@ -131,3 +131,4 @@ def polylines_via_matplotlib(data,levels):
         for y in x._paths:
             yield Polyline(fast_simplify(iter(y.vertices)))
 
+# Look into homothetic centers to perform initial segment fitting. With some assumptions, these give correct results.
